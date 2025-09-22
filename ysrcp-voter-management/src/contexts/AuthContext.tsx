@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
 
 type UserProfile = Database['public']['Tables']['users']['Row']
+type UserInsert = Database['public']['Tables']['users']['Insert']
+type UserUpdate = Database['public']['Tables']['users']['Update']
 
 interface AuthContextType {
   user: User | null
@@ -67,17 +69,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single()
+        .maybeSingle()
 
-      if (error && error.code !== 'PGRST116') {
-        throw error
+      if (error) {
+        console.error('Supabase select users error:', {
+          code: (error as any)?.code,
+          message: (error as any)?.message,
+          details: (error as any)?.details,
+          hint: (error as any)?.hint,
+        })
+        // Continue to attempt profile creation below rather than throwing
       }
 
       if (data) {
         setProfile(data)
+        return
+      }
+
+      // If no profile exists (PGRST116), create one from auth user
+      const { data: authUserResult, error: authUserError } = await supabase.auth.getUser()
+      if (authUserError) {
+        console.error('Supabase getUser error:', {
+          message: (authUserError as any)?.message,
+        })
+      }
+      const authUser = authUserResult?.user
+      if (!authUser) {
+        console.error('No auth user available when creating profile', { userIdFromSession: userId })
+        return
+      }
+
+      const nowIso = new Date().toISOString()
+      const newProfile: UserInsert = {
+        id: authUser.id,
+        email: authUser.email ?? '',
+        full_name: (authUser.user_metadata as any)?.full_name ?? null,
+        role: ((authUser.user_metadata as any)?.role as 'submitter' | 'approver' | 'admin') ?? 'submitter',
+        created_at: nowIso,
+        updated_at: nowIso,
+      }
+
+      const { data: inserted, error: insertError } = await (supabase as any)
+        .from('users')
+        .insert(newProfile)
+        .select()
+        .single()
+
+      if (insertError) {
+        console.error('Supabase insert users error:', {
+          code: (insertError as any)?.code,
+          message: (insertError as any)?.message,
+          details: (insertError as any)?.details,
+          hint: (insertError as any)?.hint,
+        })
+        throw insertError
+      }
+
+      if (inserted) {
+        setProfile(inserted)
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error)
+      console.error('Error fetching user profile:', {
+        message: (error as any)?.message,
+        code: (error as any)?.code,
+        details: (error as any)?.details,
+        hint: (error as any)?.hint,
+      })
     }
   }
 
@@ -128,9 +185,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) throw new Error('No user logged in')
     
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('users')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update({ ...(updates as UserUpdate), updated_at: new Date().toISOString() })
         .eq('id', user.id)
         .select()
         .single()
