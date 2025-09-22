@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ui/use-toast'
@@ -22,9 +22,7 @@ const voterSchema = z.object({
   surname: z.string().optional(),
   name: z.string().min(1, 'Name is required'),
   father_husband_name: z.string().optional(),
-  gender: z.enum(['Male', 'Female', 'Other'], {
-    required_error: 'Please select gender',
-  }),
+  gender: z.enum(['Male', 'Female', 'Other']),
   age: z.number().min(18, 'Age must be at least 18').max(120, 'Age must be less than 120'),
   qualification: z.string().optional(),
   caste: z.string().optional(),
@@ -105,9 +103,9 @@ export default function AddVoterPage() {
         submitted_at: action === 'submit' ? new Date().toISOString() : null,
       }
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('voter_submissions')
-        .insert([submissionData])
+        .insert(submissionData)
 
       if (error) throw error
 
@@ -224,7 +222,7 @@ export default function AddVoterPage() {
                 <div className="space-y-2">
                   <Label htmlFor="gender">Gender *</Label>
                   <Select
-                    onValueChange={(value) => form.setValue('gender', value as 'Male' | 'Female' | 'Other')}
+                    onValueChange={(value: 'Male' | 'Female' | 'Other') => form.setValue('gender', value)}
                     disabled={isLoading}
                   >
                     <SelectTrigger>
@@ -361,7 +359,7 @@ export default function AddVoterPage() {
             <div className="flex justify-end space-x-4 pt-6 border-t">
               <Button
                 type="button"
-                variant="outline"
+                className="bg-transparent text-gray-800 border border-gray-300 hover:bg-gray-100"
                 onClick={() => router.push('/dashboard')}
                 disabled={isLoading}
               >
@@ -370,7 +368,7 @@ export default function AddVoterPage() {
               
               <Button
                 type="button"
-                variant="secondary"
+                className="bg-gray-100 text-gray-900 border border-gray-300 hover:bg-gray-200"
                 onClick={form.handleSubmit((data) => onSubmit(data, 'draft'))}
                 disabled={isLoading}
               >

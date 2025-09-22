@@ -23,7 +23,7 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
-  const { profile } = useAuth()
+  const { profile, user } = useAuth()
   const [stats, setStats] = useState<DashboardStats>({
     totalSubmissions: 0,
     pendingApprovals: 0,
@@ -36,10 +36,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboardStats()
-  }, [profile])
+  }, [profile, user])
 
   const fetchDashboardStats = async () => {
-    if (!profile) return
+    const submitterId = profile?.id || user?.id
+    if (!submitterId) return
 
     try {
       // Get total submissions count
@@ -69,13 +70,13 @@ export default function DashboardPage() {
       const { count: mySubmissions } = await supabase
         .from('voter_submissions')
         .select('*', { count: 'exact', head: true })
-        .eq('submitted_by', profile.id)
+        .eq('submitted_by', submitterId)
 
       // Get user's batches count
       const { count: myBatches } = await supabase
         .from('submission_batches')
         .select('*', { count: 'exact', head: true })
-        .eq('submitted_by', profile.id)
+        .eq('submitted_by', submitterId)
 
       setStats({
         totalSubmissions: totalSubmissions || 0,
@@ -115,7 +116,7 @@ export default function DashboardPage() {
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          <CardTitle className="text-sm font-medium text-gray-900">{title}</CardTitle>
           <div className={`p-2 rounded-md ${colorClasses[color]}`}>
             <Icon className="h-4 w-4" />
           </div>
@@ -124,7 +125,7 @@ export default function DashboardPage() {
           <div className="text-2xl font-bold">
             {loading ? '...' : value.toLocaleString()}
           </div>
-          <p className="text-xs text-muted-foreground">{description}</p>
+          <p className="text-xs text-gray-700">{description}</p>
         </CardContent>
       </Card>
     )
@@ -148,7 +149,7 @@ export default function DashboardPage() {
       }
     ]
 
-    switch (profile?.role) {
+    switch (profile?.role || 'submitter') {
       case 'submitter':
         return [
           {
@@ -309,12 +310,12 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Processing Status</span>
+              <span className="text-sm font-medium text-gray-800">Processing Status</span>
               <span className="text-sm text-green-600">● Online</span>
             </div>
             
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-sm text-gray-800">
                 <span>Approval Rate</span>
                 <span className="font-medium">
                   {stats.totalSubmissions > 0 
@@ -335,7 +336,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-sm text-gray-800">
                 <span>Pending Review</span>
                 <span className="font-medium">
                   {stats.totalSubmissions > 0 

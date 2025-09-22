@@ -45,24 +45,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return null
   }
 
-  if (!profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="max-w-md w-full text-center space-y-4">
-          <h2 className="text-xl font-semibold">Profile not available</h2>
-          <p className="text-sm text-gray-600">
-            You're signed in, but your profile could not be loaded. This can happen
-            if your account hasn’t been initialized yet or due to permissions. Try
-            refreshing the page. If the issue persists, contact an administrator.
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            <Button onClick={() => router.refresh()} className="bg-blue-600 hover:bg-blue-700">Refresh</Button>
-            <Button onClick={handleSignOut} className="bg-transparent text-gray-800 border border-gray-300 hover:bg-gray-100">Sign Out</Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Fallbacks when profile is not yet available due to RLS/initialization
+  const effectiveFullName = profile?.full_name || user.email || 'User'
+  const effectiveRole = profile?.role || 'submitter'
 
   const navigation = [
     {
@@ -98,7 +83,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   ]
 
   const filteredNavigation = navigation.filter(item => 
-    item.roles.includes(profile.role)
+    item.roles.includes(effectiveRole)
   )
 
   return (
@@ -115,14 +100,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="p-4 border-b">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
-                {profile.full_name?.charAt(0) || 'U'}
+                {(profile?.full_name || user.email || 'U').charAt(0)}
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">
-                  {profile.full_name || 'User'}
+                {effectiveFullName}
                 </p>
                 <p className="text-xs text-gray-500 capitalize">
-                  {profile.role}
+                  {effectiveRole}
                 </p>
               </div>
             </div>
